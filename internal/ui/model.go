@@ -60,95 +60,86 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
-	if m.state == "tags" && m.tagEditMode != "" && m.tagInput.Focused() {
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
-			switch msg.Type {
-			case tea.KeyEsc:
-				m.tagInput.Reset()
-				m.tagEditMode = ""
-				return m, nil
-			case tea.KeyEnter:
-				tags := strings.Split(m.tagInput.Value(), ",")
-				var validTags []string
-				for _, tag := range tags {
-					tag = strings.TrimSpace(tag)
-					if tag != "" {
-						validTags = append(validTags, tag)
-					}
-				}
-
-				if len(validTags) > 0 {
-					note := m.notes[m.cursor]
-					var err error
-					if m.tagEditMode == "add" {
-						err = m.notesApp.AddTagsToNote(note.Path, validTags)
-					} else {
-						err = m.notesApp.RemoveTagsFromNote(note.Path, validTags)
-					}
-					if err != nil {
-						m.err = err
-					} else {
-						m.notes = m.notesApp.ListAllNotes()
-						m.state = "list"
-						m.tagInput.Reset()
-						m.tagEditMode = ""
-					}
-				}
-				return m, nil
-			}
-			m.tagInput, cmd = m.tagInput.Update(msg)
-			return m, cmd
-		}
-		m.tagInput, cmd = m.tagInput.Update(msg)
-		return m, cmd
-	}
-
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Global shortcuts that work in any state
 		switch msg.String() {
 		case "ctrl+c", "ctrl+q":
-			if m.state == "create" || m.state == "edit" || m.state == "tags" || m.state == "view" {
-				m.state = "list"
-				return m, nil
+			if m.state == "list" {
+				return m, tea.Quit
 			}
-			return m, tea.Quit
+			m.state = "list"
+			return m, nil
+		}
 
-		case "ctrl+h", "?":
-			if m.state == "list" || m.state == "view" {
+		// State-specific shortcuts
+		switch m.state {
+		case "list":
+			switch msg.String() {
+			case "ctrl+h", "?":
 				m.state = "help"
-			}
+			case "ctrl+t", "t":
+				if len(m.notes) > 0 {
+					m.state = "tags"
+					m.tagEditMode = ""
+				}
+			case "ctrl+n", "n":
+				m.state = "create_name"
+				m.input.Focus()
+			case "ctrl+e", "e":
+				if len(m.notes) > 0 {
+					m.state = "edit"
+					m.textarea.SetValue(m.notes[m.cursor].Content)
+					m.textarea.Focus()
+				}
+			case "ctrl+d":
+				if len(m.notes) > 0 {
+					m.state = "confirm_delete"
+				}
 
-		case "ctrl+t":
-			if (m.state == "list" || m.state == "view") && len(m.notes) > 0 {
-				m.state = "tags"
-				m.tagEditMode = ""
-				return m, nil
-			}
-
-		case "ctrl+a":
-			if m.state == "tags" && m.tagEditMode == "" {
-				m.tagEditMode = "add"
-				m.tagInput.Focus()
-				m.tagInput.SetValue("")
-				return m, nil
-			}
-
-		case "ctrl+r":
-			if m.state == "tags" && m.tagEditMode == "" && len(m.notes[m.cursor].Metadata.Tags) > 0 {
-				m.tagEditMode = "remove"
-				m.tagInput.Focus()
-				m.tagInput.SetValue("")
-				return m, nil
-			}
-
-		case "enter":
-			switch m.state {
-			case "list":
+			case "enter":
 				if len(m.notes) > 0 {
 					m.state = "view"
 				}
-			case "create_name":
+			case "up", "k":
+				if m.cursor > 0 {
+					m.cursor--
+				}
+			case "down", "j":
+				if m.cursor < len(m.notes)-1 {
+					m.cursor++
+				}
+			case " ":
+				m.showPreview = !m.showPreview
+			}
+
+		case "view":
+			switch msg.String() {
+			case "ctrl+h", "?":
+				m.state = "help"
+			case "ctrl+t", "t":
+				if len(m.notes) > 0 {
+					m.state = "tags"
+					m.tagEditMode = ""
+				}
+			case "ctrl+e", "e":
+				if len(m.notes) > 0 {
+					m.state = "edit"
+					m.textarea.SetValue(m.notes[m.cursor].Content)
+					m.textarea.Focus()
+				}
+			case "ctrl+d", "d":
+				if len(m.notes) > 0 {
+					m.state = "confirm_delete"
+				}
+
+			case "esc":
+				m.state = "list"
+			}
+
+		case "create_name":
+			switch msg.String() {
+			case "enter":
 				m.newNoteName = m.input.Value()
 				if m.newNoteName != "" {
 					if m.notesApp.NoteExists(m.newNoteName) {
@@ -161,43 +152,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.textarea.Focus()
 					m.input.Reset()
 				}
+			case "esc":
+				m.state = "list"
+				m.input.Reset()
+				m.newNoteName = ""
 			}
+			m.input, cmd = m.input.Update(msg)
 
-		case "ctrl+n":
-			if m.state == "list" {
-				m.state = "create_name"
-				m.input.Focus()
-				return m, nil
-			}
-
-		case "ctrl+e":
-			if (m.state == "list" || m.state == "view") && len(m.notes) > 0 {
-				m.state = "edit"
-				m.textarea.SetValue(m.notes[m.cursor].Content)
-				m.textarea.Focus()
-				return m, nil
-			}
-
-		case "ctrl+d":
-			if (m.state == "list" || m.state == "view") && len(m.notes) > 0 {
-				err := m.notesApp.DeleteNote(m.notes[m.cursor].Path)
-				if err != nil {
-					m.err = err
-				} else {
-					m.notes = m.notesApp.ListAllNotes()
-					if m.cursor >= len(m.notes) {
-						m.cursor = len(m.notes) - 1
-					}
-					if m.state == "view" {
-						m.state = "list"
-					}
-				}
-				return m, nil
-			}
-
-		case "ctrl+s":
-			switch m.state {
-			case "create":
+		case "create":
+			switch msg.String() {
+			case "ctrl+s":
 				if m.newNoteName != "" {
 					err := m.notesApp.CreateNote(m.newNoteName, m.textarea.Value())
 					if err != nil {
@@ -209,7 +173,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.newNoteName = ""
 					}
 				}
-			case "edit":
+			case "esc":
+				m.state = "list"
+				m.textarea.Reset()
+				m.newNoteName = ""
+			}
+			m.textarea, cmd = m.textarea.Update(msg)
+
+		case "edit":
+			switch msg.String() {
+			case "ctrl+s":
 				if len(m.notes) > 0 {
 					err := m.notesApp.UpdateNoteContent(m.notes[m.cursor].Path, m.textarea.Value())
 					if err != nil {
@@ -220,45 +193,93 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.textarea.Reset()
 					}
 				}
-			}
-
-		case "up", "k":
-			if m.state == "list" && m.cursor > 0 {
-				m.cursor--
-			}
-
-		case "down", "j":
-			if m.state == "list" && m.cursor < len(m.notes)-1 {
-				m.cursor++
-			}
-
-		case "esc":
-			if m.state == "create" || m.state == "edit" || m.state == "view" ||
-				m.state == "help" || m.state == "create_name" || m.state == "tags" {
+			case "esc":
 				m.state = "list"
 				m.textarea.Reset()
-				m.input.Reset()
-				m.tagInput.Reset()
-				m.newNoteName = ""
-				m.tagEditMode = ""
+			}
+			m.textarea, cmd = m.textarea.Update(msg)
+
+		case "confirm_delete":
+			switch msg.String() {
+			case "y":
+				err := m.notesApp.DeleteNote(m.notes[m.cursor].Path)
+				if err != nil {
+					m.err = err
+				} else {
+					m.notes = m.notesApp.ListAllNotes()
+					if m.cursor >= len(m.notes) {
+						m.cursor = len(m.notes) - 1
+					}
+					m.state = "list"
+				}
+			case "n", "esc":
+				m.state = "list"
 			}
 
-		case " ":
-			if m.state == "list" {
-				m.showPreview = !m.showPreview
+		case "tags":
+			if m.tagEditMode != "" {
+				switch msg.String() {
+				case "esc":
+					m.tagInput.Reset()
+					m.tagEditMode = ""
+				case "enter":
+					tags := strings.Split(m.tagInput.Value(), ",")
+					var validTags []string
+					for _, tag := range tags {
+						tag = strings.TrimSpace(tag)
+						if tag != "" {
+							validTags = append(validTags, tag)
+						}
+					}
+
+					if len(validTags) > 0 {
+						note := m.notes[m.cursor]
+						var err error
+						if m.tagEditMode == "add" {
+							err = m.notesApp.AddTagsToNote(note.Path, validTags)
+						} else {
+							err = m.notesApp.RemoveTagsFromNote(note.Path, validTags)
+						}
+						if err != nil {
+							m.err = err
+						} else {
+							m.notes = m.notesApp.ListAllNotes()
+							m.state = "list"
+							m.tagInput.Reset()
+							m.tagEditMode = ""
+						}
+					}
+				default:
+					m.tagInput, cmd = m.tagInput.Update(msg)
+				}
+			} else {
+				switch msg.String() {
+				case "ctrl+a":
+					m.tagEditMode = "add"
+					m.tagInput.Focus()
+					m.tagInput.SetValue("")
+				case "ctrl+d":
+					if len(m.notes[m.cursor].Metadata.Tags) > 0 {
+						m.tagEditMode = "delete"
+						m.tagInput.Focus()
+						m.tagInput.SetValue("")
+					}
+				case "esc":
+					m.state = "list"
+					m.tagInput.Reset()
+				}
+			}
+
+		case "help":
+			switch msg.String() {
+			case "esc":
+				m.state = "list"
 			}
 		}
 
 	case tea.WindowSizeMsg:
 		m.textarea.SetWidth(msg.Width - 4)
 		return m, nil
-	}
-
-	switch m.state {
-	case "create_name":
-		m.input, cmd = m.input.Update(msg)
-	case "create", "edit":
-		m.textarea, cmd = m.textarea.Update(msg)
 	}
 
 	return m, cmd
@@ -291,7 +312,7 @@ Commands:
 
 Tag Management:
   ctrl+a    - Add tags
-  ctrl+r    - Remove tags
+  ctrl+d    - Delete tags
   enter     - Confirm tags
   esc       - Cancel
 `))
@@ -311,6 +332,13 @@ Tag Management:
 			s.WriteString(titleStyle.Render("Editing: "+m.notes[m.cursor].Name) + "\n\n")
 			s.WriteString(textareaStyle.Render(m.textarea.View()))
 			s.WriteString("\n" + helpStyle.Render("Press ctrl+s to save, esc to cancel"))
+		}
+	case "confirm_delete":
+		if len(m.notes) > 0 {
+			note := m.notes[m.cursor]
+			s.WriteString(titleStyle.Render("Confirm Delete") + "\n\n")
+			s.WriteString(fmt.Sprintf("Are you sure you want to delete note '%s'?\n\n", note.Name))
+			s.WriteString(helpStyle.Render("Press 'y' to confirm, 'n' or 'esc' to cancel"))
 		}
 
 	case "view":
@@ -332,7 +360,7 @@ Tag Management:
 
 			if len(note.Metadata.Tags) > 0 {
 				s.WriteString("Current tags: " + tagStyle.Render(strings.Join(note.Metadata.Tags, ", ")) + "\n\n")
-				s.WriteString(helpStyle.Render("Press 'ctrl+a' to add tags, 'ctrl+r' to remove tags, esc to go back") + "\n\n")
+				s.WriteString(helpStyle.Render("Press 'ctrl+a' to add tags, 'ctrl+d' to delete tags, esc to go back") + "\n\n")
 			} else {
 				s.WriteString("No tags\n\n")
 				s.WriteString(helpStyle.Render("Press 'ctrl+a' to add tags, esc to go back") + "\n\n")
@@ -342,8 +370,8 @@ Tag Management:
 				s.WriteString("Add tags (comma-separated):\n")
 				s.WriteString(inputStyle.Render(m.tagInput.View()) + "\n")
 				s.WriteString(helpStyle.Render("Press enter to confirm"))
-			} else if m.tagEditMode == "remove" {
-				s.WriteString("Remove tags (comma-separated):\n")
+			} else if m.tagEditMode == "delete" {
+				s.WriteString("Delete tags (comma-separated):\n")
 				s.WriteString(inputStyle.Render(m.tagInput.View()) + "\n")
 				s.WriteString(helpStyle.Render("Press enter to confirm"))
 			}
