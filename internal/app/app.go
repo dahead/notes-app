@@ -43,8 +43,22 @@ func (app *NotesApp) RefreshIndex() error {
 	return nil
 }
 
+// NoteExists checks if a note with the given name already exists
+func (app *NotesApp) NoteExists(name string) bool {
+	for _, note := range app.index.GetAllNotes() {
+		if strings.EqualFold(note.Name, name) {
+			return true
+		}
+	}
+	return false
+}
+
 // CreateNote creates a new note
 func (app *NotesApp) CreateNote(name, content string) error {
+	if app.NoteExists(name) {
+		return fmt.Errorf("note with name '%s' already exists", name)
+	}
+
 	_, err := app.storage.CreateNote(name, content)
 	if err != nil {
 		return err

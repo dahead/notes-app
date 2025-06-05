@@ -5,67 +5,67 @@ import "github.com/charmbracelet/lipgloss"
 var (
 	// Main styles
 	mainStyle = lipgloss.NewStyle().
-			Margin(1, 2)
+		Margin(1, 2)
 
 	// Title styles
 	titleStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#FAFAFA")).
-			Background(lipgloss.Color("#7B2CBF")).
-			Padding(0, 1).
-			MarginBottom(1)
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Background(lipgloss.Color("#7B2CBF")).
+		Padding(0, 1).
+		MarginBottom(1)
 
 	// List styles
 	listStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("#666666")).
-			Padding(1, 2).
-			Width(80)
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#666666")).
+		Padding(1, 2).
+		Width(StandardWidth)
 
 	noteStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFFFF")).
-			Padding(0, 2)
+		Foreground(lipgloss.Color("#FFFFFF")).
+		Padding(0, 2)
 
 	selectedNoteStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#000000")).
-				Background(lipgloss.Color("#9D4EDD")).
-				Padding(0, 2)
+		Foreground(lipgloss.Color("#000000")).
+		Background(lipgloss.Color("#9D4EDD")).
+		Padding(0, 2)
 
 	// Preview styles
 	previewStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("#666666")).
-			Padding(1, 2).
-			Width(80).
-			Height(6)
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#666666")).
+		Padding(1, 2).
+		Width(StandardWidth).
+		Height(6)
 
 	previewTitleStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#666666")).
-				Bold(true).
-				MarginTop(1)
+		Foreground(lipgloss.Color("#666666")).
+		Bold(true).
+		MarginTop(1)
 
 	// Input styles
 	inputStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("#666666")).
-			Padding(0, 1).
-			Width(60)
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#666666")).
+		Padding(0, 1).
+		Width(StandardWidth)
 
 	textareaStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("#666666")).
-			Padding(0, 1).
-			Width(80).
-			Height(20)
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#666666")).
+		Padding(0, 1).
+		Width(StandardWidth).
+		Height(20)
 
 	// Utility styles
 	helpStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#666666"))
+		Foreground(lipgloss.Color("#666666"))
 
 	errorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FF0000"))
+		Foreground(lipgloss.Color("#FF0000"))
 
 	tagStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#5af78e")).
-			Italic(true)
+		Foreground(lipgloss.Color("#5af78e")).
+		Italic(true)
 )

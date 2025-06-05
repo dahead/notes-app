@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -24,26 +23,23 @@ type Model struct {
 	tagEditMode string // "", "add", "remove"
 	err         error
 	newNoteName string
-	showPreview bool // New field for preview toggle
+	showPreview bool
 }
 
 func NewModel(notesApp *app.NotesApp) Model {
 	ti := textinput.New()
 	ti.Placeholder = "Enter note name..."
-	ti.Width = 58
+	ti.Width = StandardWidth - StandardTextInputPadding
 
 	ta := textarea.New()
 	ta.Placeholder = "Enter note content..."
 	ta.ShowLineNumbers = false
-	ta.SetWidth(78)
+	ta.SetWidth(StandardWidth - StandardTextInputPadding)
 	ta.SetHeight(18)
-	ta.KeyMap.InsertNewline = key.NewBinding(
-		key.WithKeys("enter"),
-	)
 
 	tagInput := textinput.New()
 	tagInput.Placeholder = "Enter tags (comma-separated)..."
-	tagInput.Width = 58
+	tagInput.Width = StandardWidth - StandardTextInputPadding
 
 	return Model{
 		notes:       notesApp.ListAllNotes(),
@@ -53,20 +49,17 @@ func NewModel(notesApp *app.NotesApp) Model {
 		notesApp:    notesApp,
 		selected:    make(map[int]struct{}),
 		state:       "list",
-		showPreview: false, // Initialize preview as hidden
+		showPreview: false,
 	}
 }
 
-// Init implements tea.Model
 func (m Model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-// Update implements tea.Model
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
-	// Handle tag input updates first when in input mode
 	if m.state == "tags" && m.tagEditMode != "" && m.tagInput.Focused() {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
@@ -103,66 +96,37 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 				return m, nil
-			default:
-				m.tagInput, cmd = m.tagInput.Update(msg)
-				return m, cmd
 			}
+			m.tagInput, cmd = m.tagInput.Update(msg)
+			return m, cmd
 		}
 		m.tagInput, cmd = m.tagInput.Update(msg)
 		return m, cmd
 	}
 
-	// Handle other messages
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
-			if m.state == "create" || m.state == "edit" || m.state == "tags" {
+		case "ctrl+c", "ctrl+q":
+			if m.state == "create" || m.state == "edit" || m.state == "tags" || m.state == "view" {
 				m.state = "list"
 				return m, nil
 			}
 			return m, tea.Quit
 
-		case "?", "h":
+		case "ctrl+h", "?":
 			if m.state == "list" || m.state == "view" {
 				m.state = "help"
 			}
 
-		case " ":
-			if m.state == "list" {
-				m.showPreview = !m.showPreview
-				return m, nil
-			}
-
-		case "esc":
-			if m.state == "create" || m.state == "edit" || m.state == "view" ||
-				m.state == "help" || m.state == "create_name" || m.state == "tags" {
-				m.state = "list"
-				m.textarea.Reset()
-				m.input.Reset()
-				m.tagInput.Reset()
-				m.newNoteName = ""
-				m.tagEditMode = ""
-			}
-
-		case "up", "k":
-			if m.state == "list" && m.cursor > 0 {
-				m.cursor--
-			}
-
-		case "down", "j":
-			if m.state == "list" && m.cursor < len(m.notes)-1 {
-				m.cursor++
-			}
-
-		case "t":
+		case "ctrl+t":
 			if (m.state == "list" || m.state == "view") && len(m.notes) > 0 {
 				m.state = "tags"
 				m.tagEditMode = ""
 				return m, nil
 			}
 
-		case "a":
+		case "ctrl+a":
 			if m.state == "tags" && m.tagEditMode == "" {
 				m.tagEditMode = "add"
 				m.tagInput.Focus()
@@ -170,7 +134,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 
-		case "r":
+		case "ctrl+r":
 			if m.state == "tags" && m.tagEditMode == "" && len(m.notes[m.cursor].Metadata.Tags) > 0 {
 				m.tagEditMode = "remove"
 				m.tagInput.Focus()
@@ -187,10 +151,48 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "create_name":
 				m.newNoteName = m.input.Value()
 				if m.newNoteName != "" {
+					if m.notesApp.NoteExists(m.newNoteName) {
+						m.err = fmt.Errorf("note with name '%s' already exists", m.newNoteName)
+						m.input.SetValue("")
+						return m, nil
+					}
 					m.state = "create"
+					m.textarea.Reset()
 					m.textarea.Focus()
 					m.input.Reset()
 				}
+			}
+
+		case "ctrl+n":
+			if m.state == "list" {
+				m.state = "create_name"
+				m.input.Focus()
+				return m, nil
+			}
+
+		case "ctrl+e":
+			if (m.state == "list" || m.state == "view") && len(m.notes) > 0 {
+				m.state = "edit"
+				m.textarea.SetValue(m.notes[m.cursor].Content)
+				m.textarea.Focus()
+				return m, nil
+			}
+
+		case "ctrl+d":
+			if (m.state == "list" || m.state == "view") && len(m.notes) > 0 {
+				err := m.notesApp.DeleteNote(m.notes[m.cursor].Path)
+				if err != nil {
+					m.err = err
+				} else {
+					m.notes = m.notesApp.ListAllNotes()
+					if m.cursor >= len(m.notes) {
+						m.cursor = len(m.notes) - 1
+					}
+					if m.state == "view" {
+						m.state = "list"
+					}
+				}
+				return m, nil
 			}
 
 		case "ctrl+s":
@@ -220,41 +222,38 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
-		case "n":
+		case "up", "k":
+			if m.state == "list" && m.cursor > 0 {
+				m.cursor--
+			}
+
+		case "down", "j":
+			if m.state == "list" && m.cursor < len(m.notes)-1 {
+				m.cursor++
+			}
+
+		case "esc":
+			if m.state == "create" || m.state == "edit" || m.state == "view" ||
+				m.state == "help" || m.state == "create_name" || m.state == "tags" {
+				m.state = "list"
+				m.textarea.Reset()
+				m.input.Reset()
+				m.tagInput.Reset()
+				m.newNoteName = ""
+				m.tagEditMode = ""
+			}
+
+		case " ":
 			if m.state == "list" {
-				m.state = "create_name"
-				m.input.Focus()
-				return m, nil
-			}
-
-		case "e":
-			if (m.state == "list" || m.state == "view") && len(m.notes) > 0 {
-				m.state = "edit"
-				m.textarea.SetValue(m.notes[m.cursor].Content)
-				m.textarea.Focus()
-				return m, nil
-			}
-
-		case "d":
-			if (m.state == "list" || m.state == "view") && len(m.notes) > 0 {
-				err := m.notesApp.DeleteNote(m.notes[m.cursor].Path)
-				if err != nil {
-					m.err = err
-				} else {
-					m.notes = m.notesApp.ListAllNotes()
-					if m.cursor >= len(m.notes) {
-						m.cursor = len(m.notes) - 1
-					}
-					if m.state == "view" {
-						m.state = "list"
-					}
-				}
-				return m, nil
+				m.showPreview = !m.showPreview
 			}
 		}
+
+	case tea.WindowSizeMsg:
+		m.textarea.SetWidth(msg.Width - 4)
+		return m, nil
 	}
 
-	// Handle other input states
 	switch m.state {
 	case "create_name":
 		m.input, cmd = m.input.Update(msg)
@@ -265,7 +264,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-// View implements tea.Model
 func (m Model) View() string {
 	var s strings.Builder
 
@@ -278,22 +276,22 @@ func (m Model) View() string {
 		s.WriteString(titleStyle.Render("Help") + "\n\n")
 		s.WriteString(helpStyle.Render(`
 Commands:
-  h, ?      - Show this help
+  ctrl+h, ? - Show this help
   j, ↓      - Move down
   k, ↑      - Move up
-  n         - Create new note
-  e         - Edit selected note
-  d         - Delete selected note
-  t         - Manage tags
+  ctrl+n    - Create new note
+  ctrl+e    - Edit selected note
+  ctrl+d    - Delete selected note
+  ctrl+t    - Manage tags
   space     - Toggle preview
   enter     - View note
   ctrl+s    - Save (in edit/create mode)
   esc       - Back/cancel
-  q, ctrl+c - Quit application
+  ctrl+q    - Quit application
 
 Tag Management:
-  a         - Add tags
-  r         - Remove tags
+  ctrl+a    - Add tags
+  ctrl+r    - Remove tags
   enter     - Confirm tags
   esc       - Cancel
 `))
@@ -334,10 +332,10 @@ Tag Management:
 
 			if len(note.Metadata.Tags) > 0 {
 				s.WriteString("Current tags: " + tagStyle.Render(strings.Join(note.Metadata.Tags, ", ")) + "\n\n")
-				s.WriteString(helpStyle.Render("Press 'a' to add tags, 'r' to remove tags, esc to go back") + "\n\n")
+				s.WriteString(helpStyle.Render("Press 'ctrl+a' to add tags, 'ctrl+r' to remove tags, esc to go back") + "\n\n")
 			} else {
 				s.WriteString("No tags\n\n")
-				s.WriteString(helpStyle.Render("Press 'a' to add tags, esc to go back") + "\n\n")
+				s.WriteString(helpStyle.Render("Press 'ctrl+a' to add tags, esc to go back") + "\n\n")
 			}
 
 			if m.tagEditMode == "add" {
@@ -355,7 +353,7 @@ Tag Management:
 		s.WriteString(titleStyle.Render("📝 Notes") + "\n\n")
 
 		if len(m.notes) == 0 {
-			s.WriteString(listStyle.Render("No notes found. Press 'n' to create one."))
+			s.WriteString(listStyle.Render("No notes found. Press 'ctrl+n' to create one."))
 		} else {
 			var listContent strings.Builder
 			for i, note := range m.notes {
@@ -383,7 +381,6 @@ Tag Management:
 			}
 			s.WriteString(listStyle.Render(listContent.String()))
 
-			// Add preview of selected note at the bottom if enabled
 			if m.showPreview && len(m.notes) > 0 {
 				note := m.notes[m.cursor]
 				s.WriteString("\n" + previewTitleStyle.Render("Preview"))
