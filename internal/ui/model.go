@@ -171,7 +171,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "r":
-			if m.state == "tags" && m.tagEditMode == "" {
+			if m.state == "tags" && m.tagEditMode == "" && len(m.notes[m.cursor].Metadata.Tags) > 0 {
 				m.tagEditMode = "remove"
 				m.tagInput.Focus()
 				m.tagInput.SetValue("")
@@ -334,11 +334,11 @@ Tag Management:
 
 			if len(note.Metadata.Tags) > 0 {
 				s.WriteString("Current tags: " + tagStyle.Render(strings.Join(note.Metadata.Tags, ", ")) + "\n\n")
+				s.WriteString(helpStyle.Render("Press 'a' to add tags, 'r' to remove tags, esc to go back") + "\n\n")
 			} else {
 				s.WriteString("No tags\n\n")
+				s.WriteString(helpStyle.Render("Press 'a' to add tags, esc to go back") + "\n\n")
 			}
-
-			s.WriteString(helpStyle.Render("Press 'a' to add tags, 'r' to remove tags, esc to go back") + "\n\n")
 
 			if m.tagEditMode == "add" {
 				s.WriteString("Add tags (comma-separated):\n")
