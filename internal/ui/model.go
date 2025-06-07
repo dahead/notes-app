@@ -92,7 +92,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.textarea.SetValue(m.notes[m.cursor].Content)
 					m.textarea.Focus()
 				}
-			case "ctrl+d":
+			case "ctrl+d", "d":
 				if len(m.notes) > 0 {
 					m.state = "confirm_delete"
 				}
@@ -297,18 +297,18 @@ func (m Model) View() string {
 		s.WriteString(titleStyle.Render("Help") + "\n\n")
 		s.WriteString(helpStyle.Render(`
 Commands:
-  ctrl+h, ? - Show this help
-  j, ↓      - Move down
-  k, ↑      - Move up
-  ctrl+n    - Create new note
-  ctrl+e    - Edit selected note
-  ctrl+d    - Delete selected note
-  ctrl+t    - Manage tags
-  space     - Toggle preview
-  enter     - View note
-  ctrl+s    - Save (in edit/create mode)
-  esc       - Back/cancel
-  ctrl+q    - Quit application
+  ctrl+h, ?	- Show this help
+  j, ↓		 - Move down
+  k, ↑		 - Move up
+  n    		- Create new note
+  e			- Edit selected note
+  d			- Delete selected note
+  t			- Manage tags
+  space        - Toggle preview
+  enter        - View note
+  ctrl+s       - Save (in edit/create mode)
+  esc          - Back/cancel
+  ctrl+q		- Quit application
 
 Tag Management:
   ctrl+a    - Add tags

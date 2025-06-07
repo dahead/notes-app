@@ -23,8 +23,8 @@ func main() {
 
 	p := tea.NewProgram(
 		ui.NewModel(notesApp),
-		tea.WithAltScreen(),       // Use alternate screen buffer
-		tea.WithMouseCellMotion(), // Enable mouse support
+		tea.WithAltScreen(),
+		tea.WithMouseAllMotion(),
 	)
 
 	if _, err := p.Run(); err != nil {

@@ -3,7 +3,8 @@ package ui
 // UI constants
 const (
 	// StandardWidth is the default width for UI components
-	StandardWidth = 80
+	StandardWidth  = 60
+	StandardHeight = 24
 	// StandardTextInputPadding is the padding to account for borders in text inputs
 	StandardTextInputPadding = 2
 )
