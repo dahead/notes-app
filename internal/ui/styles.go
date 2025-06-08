@@ -19,8 +19,8 @@ var (
 	listStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#666666")).
-			Padding(1, 2).
-			Width(StandardWidth)
+			Padding(1, 2)
+		// Width(StandardWidth)
 
 	noteStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FFFFFF")).
@@ -36,8 +36,8 @@ var (
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#666666")).
 			Padding(1, 2).
-			Width(StandardWidth).
-			Height(6)
+		// Width(StandardWidth).
+		Height(6)
 
 	previewTitleStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#666666")).
@@ -48,15 +48,16 @@ var (
 	inputStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#666666")).
-			Padding(0, 1).
-			Width(StandardWidth)
+			Padding(0, 1)
+		// Width(StandardWidth)
 
 	textareaStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#666666")).
 			Padding(0, 1).
 			Width(StandardWidth).
-			Height(StandardHeight)
+		// Width( - StandardTextInputPadding).
+		Height(StandardHeight)
 
 	// Utility styles
 	helpStyle = lipgloss.NewStyle().

@@ -23,7 +23,7 @@ func main() {
 
 	p := tea.NewProgram(
 		ui.NewModel(notesApp),
-		tea.WithAltScreen(),
+		// tea.WithAltScreen(),
 		tea.WithMouseAllMotion(),
 	)
 
