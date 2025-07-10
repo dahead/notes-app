@@ -378,7 +378,7 @@ Tag Management:
 		}
 
 	case "list":
-		s.WriteString(titleStyle.Render("📝 Notes") + "\n\n")
+		// s.WriteString(titleStyle.Render("📝 Notes") + "\n\n")
 
 		if len(m.notes) == 0 {
 			s.WriteString(listStyle.Render("No notes found. Press 'ctrl+n' to create one."))
